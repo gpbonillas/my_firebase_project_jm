@@ -82,7 +82,7 @@ class _UserPageState extends State<UserPage> {
                     final user = User(
                       name: controllerName.text,
                       age: int.parse(controllerAge.text),
-                      birthday: DateTime.parse(controllerDate.text),
+                      birthday: Timestamp.fromDate(DateTime.parse(controllerDate.text)),
                     );
 
                     createUser(user);

@@ -1,37 +1,30 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:my_firebase_project_jm/page/user_page.dart';
 
-import 'model/user.dart';
-
-void main() async {
+Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-
   runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  static final String title = 'Firestore CRUD Write/Read';
-
+  static final String title = 'Firebase CRUD Update';
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: title,
-      theme: ThemeData(
-        primarySwatch: Colors.red,
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            minimumSize: Size.fromHeight(46),
-            textStyle: TextStyle(fontSize: 24),
+  Widget build(BuildContext context) => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: title,
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              textStyle: TextStyle(fontSize: 24),
+              minimumSize: Size.fromHeight(64),
+            ),
           ),
         ),
-      ),
-      home: MainPage(),
-    );
-  }
+        home: MainPage(),
+      );
 }
 
 class MainPage extends StatefulWidget {
@@ -40,95 +33,46 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  final controller = TextEditingController();
-
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('All Users'),
-      ),
-      body: buildUsers(),
-      // body: buildSingleUser(),
-      floatingActionButton: FloatingActionButton(
-        child: Icon(Icons.add),
-        onPressed: () {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (context) => UserPage(),
-          ));
-        },
-      ),
-    );
-  }
-
-  Widget buildUsers() => StreamBuilder<List<User>>(
-      stream: readUsers(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Text('Something went wrong! ${snapshot.error}');
-        } else if (snapshot.hasData) {
-          final users = snapshot.data!;
-
-          return ListView(
-            children: users.map(buildUser).toList(),
-          );
-        } else {
-          return Center(child: CircularProgressIndicator());
-        }
-      });
-
-  Widget buildSingleUser() => FutureBuilder<User?>(
-        future: readUser(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Text('Something went wrong! ${snapshot.error}');
-          } else if (snapshot.hasData) {
-            final user = snapshot.data;
-
-            return user == null
-                ? Center(child: Text('No User'))
-                : buildUser(user);
-          } else {
-            return Center(child: CircularProgressIndicator());
-          }
-        },
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          title: Text(MyApp.title),
+          centerTitle: true,
+        ),
+        body: Container(
+          padding: EdgeInsets.all(32),
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                child: Text('Update'),
+                onPressed: () {
+                  final docUser = FirebaseFirestore.instance
+                      .collection('users')
+                      .doc('my-id');
+                  // Update specific fields
+                  docUser.set({
+                    'name': 'James',
+                  });
+                  // Update nested fields
+                  docUser.update({
+                    'city.name': 'Santo Domingo',
+                  });
+                },
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                child: Text('Delete'),
+                onPressed: () {
+                  final docUser = FirebaseFirestore.instance
+                      .collection('users')
+                      .doc('my-id');
+                  docUser.delete();
+                },
+              ),
+            ],
+          ),
+        ),
       );
-
-  Widget buildUser(User user) => ListTile(
-        leading: CircleAvatar(child: Text('${user.age}')),
-        title: Text(user.name),
-        subtitle: Text(user.birthday.toDate().toIso8601String()),
-      );
-
-  Stream<List<User>> readUsers() => FirebaseFirestore.instance
-      .collection('users')
-      .snapshots()
-      .map((snapshot) =>
-          snapshot.docs.map((doc) => User.fromJson(doc.data())).toList());
-
-  Future<User?> readUser() async {
-    /// Get single document by ID
-    final docUser = FirebaseFirestore.instance.collection('users').doc('my-id');
-    final snapshot = await docUser.get();
-
-    if (snapshot.exists) {
-      return User.fromJson(snapshot.data()!);
-    }
-  }
-
-  Future createUser({required String name}) async {
-    final docUser = FirebaseFirestore.instance.collection('users').doc();
-
-    final user = User(
-      id: docUser.id,
-      name: name,
-      age: 32,
-      birthday: Timestamp.fromDate(DateTime(1990, 2, 17)),
-    );
-
-    final json = user.toJson();
-
-    // Create document and write data to Firestore
-    await docUser.set(json);
-  }
 }
